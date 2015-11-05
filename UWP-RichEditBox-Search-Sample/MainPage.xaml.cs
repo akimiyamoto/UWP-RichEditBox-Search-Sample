@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.UI;
+using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -20,6 +22,7 @@ namespace UWP_RichEditBox_Search_Sample
         private bool _formatChanged = false;
         private string _oldQuery = string.Empty;
         private Color _highLihgtColor = Color.FromArgb(255, 150, 190, 255);
+        private List<ITextRange> _foundKeys = new List<ITextRange>();
 
         public MainPage()
         {
@@ -43,6 +46,20 @@ namespace UWP_RichEditBox_Search_Sample
             FindText(query, true);
         }
 
+        private void txtSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (txtSearchBox.Text.Length == 0)
+                ResetTextFormat();
+        }
+
+        private void txtSearchBox_KeyUp(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Enter)
+            {
+                string query = txtSearchBox.Text;
+                FindText(query);
+            }
+        }
 
         private void FindText(string query, bool Isfocus = false)
         {
@@ -59,6 +76,7 @@ namespace UWP_RichEditBox_Search_Sample
             var end = docText.Length;
             var range = txtContent.Document.GetRange(start, end);
             int result = range.FindText(query, end - start, Windows.UI.Text.FindOptions.None);
+            _foundKeys.Add(range);
 
             if (result == 0)
             {
@@ -79,27 +97,11 @@ namespace UWP_RichEditBox_Search_Sample
         {
             if (_formatChanged)
             {
-                // Very high cost process
-                string docText;
-                txtContent.Document.GetText(Windows.UI.Text.TextGetOptions.None, out docText);
-                var range = txtContent.Document.GetRange(0, docText.Length);
-                range.CharacterFormat.BackgroundColor = ((SolidColorBrush)txtContent.Background).Color;
+                var bkcolor = ((SolidColorBrush)txtContent.Background).Color;
+                foreach (var item in _foundKeys)
+                    item.CharacterFormat.BackgroundColor = bkcolor;
                 _formatChanged = false;
-            }
-        }
-
-        private void txtSearchBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (txtSearchBox.Text.Length == 0)
-                ResetTextFormat();
-        }
-
-        private void txtSearchBox_KeyUp(object sender, KeyRoutedEventArgs e)
-        {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                string query = txtSearchBox.Text;
-                FindText(query);
+                _foundKeys.Clear();
             }
         }
     }
